@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Tax Consultancy Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --light-gray: #f8f9fa;
+            --dark-gray: #343a40;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f8fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        .register-container {
+            max-width: 900px;
+            width: 100%;
+        }
+        .register-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .register-image {
+            background: linear-gradient(135deg, rgba(13,110,253,0.9) 0%, rgba(0,153,255,0.9) 100%), url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80');
+            background-size: cover;
+            background-position: center;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px;
+            color: white;
+        }
+        .register-form {
+            padding: 40px;
+        }
+        .form-control {
+            padding: 12px 15px;
+            border-radius: 8px;
+        }
+        .btn-register {
+            padding: 12px 15px;
+            border-radius: 8px;
+            width: 100%;
+        }
+        .register-footer {
+            border-top: 1px solid #e9ecef;
+            padding-top: 20px;
+            margin-top: 30px;
+        }
+        .subscription-card {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .price-tag {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .check-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .check-item i {
+            color: var(--success-color);
+            margin-right: 10px;
+        }
+        .demo-badge {
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #ff4757;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 0 0 10px 0;
+            font-weight: bold;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-badge">STATIC DEMO</div>
+    <div class="container register-container">
+        <div class="row">
+            <div class="col-md-12 text-center mb-4">
+                <a href="index.html" class="text-decoration-none">
+                    <h2 class="text-primary"><i class="bi bi-receipt me-2"></i>Tax Consultancy Portal</h2>
+                </a>
+            </div>
+        </div>
+        
+        <div class="card register-card">
+            <div class="row g-0">
+                <div class="col-md-5 d-none d-md-block">
+                    <div class="register-image">
+                        <h2 class="mb-3">Join Our Tax Portal</h2>
+                        <p class="lead">Get expert tax consultation, document management, and financial guidance all in one place.</p>
+                        <div class="mt-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-check-circle-fill me-3" style="font-size: 1.5rem;"></i>
+                                <span>Professional tax consultation</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-check-circle-fill me-3" style="font-size: 1.5rem;"></i>
+                                <span>Secure document storage</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-check-circle-fill me-3" style="font-size: 1.5rem;"></i>
+                                <span>Tax filing assistance</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-check-circle-fill me-3" style="font-size: 1.5rem;"></i>
+                                <span>Financial planning tools</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="register-form">
+                        <h3 class="mb-4">Create Your Account</h3>
+                        
+                        <div class="subscription-card">
+                            <div class="row align-items-center">
+                                <div class="col-md-7">
+                                    <h5 class="mb-3">Premium Subscription</h5>
+                                    <div class="check-item">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Unlimited document storage</span>
+                                    </div>
+                                    <div class="check-item">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Priority tax consultation</span>
+                                    </div>
+                                    <div class="check-item">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Tax filing assistance</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-5 text-center text-md-end mt-3 mt-md-0">
+                                    <div class="price-tag">₹236</div>
+                                    <small class="text-muted">per month (incl. GST)</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <form id="registerForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="firstName" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="firstName" placeholder="Enter first name">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="lastName" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="lastName" placeholder="Enter last name">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="email" placeholder="Enter your email">
+                            </div>
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" placeholder="Enter your phone number">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="password" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="password" placeholder="Create password">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="confirmPassword" class="form-label">Confirm Password</label>
+                                    <input type="password" class="form-control" id="confirmPassword" placeholder="Confirm password">
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="termsCheckbox">
+                                    <label class="form-check-label" for="termsCheckbox">
+                                        I agree to the <a href="#" class="text-primary">Terms of Service</a> and <a href="#" class="text-primary">Privacy Policy</a>
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-register" onclick="simulateRegister()">
+                                Register & Subscribe <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                            
+                            <div class="register-footer text-center">
+                                <p class="mb-0">Already have an account? <a href="login.html" class="text-primary">Login</a></p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function simulateRegister() {
+            // Demo function - in a real app, this would validate and submit to server
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const termsCheckbox = document.getElementById('termsCheckbox').checked;
+            
+            if(!firstName || !lastName || !email || !password || !confirmPassword) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            if(password !== confirmPassword) {
+                alert('Passwords do not match');
+                return;
+            }
+            
+            if(!termsCheckbox) {
+                alert('Please agree to the Terms of Service and Privacy Policy');
+                return;
+            }
+            
+            // For demo purposes, redirect to dashboard
+            window.location.href = 'dashboard.html';
+        }
+    </script>
+</body>
+</html> 

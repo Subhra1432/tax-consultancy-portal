@@ -1,0 +1,182 @@
+/* Tax Consultancy Portal - Custom Styles */
+
+:root {
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --info-color: #17a2b8;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --light-bg: #f8f9fa;
+    --dark-bg: #343a40;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f8fa;
+}
+
+/* Common Components */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    transition: transform 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.btn-primary {
+    padding: 10px 25px;
+    border-radius: 50px;
+}
+
+/* Dashboard Styles */
+.sidebar {
+    min-height: 100vh;
+    background-color: var(--dark-bg);
+    color: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    position: fixed;
+    z-index: 100;
+}
+
+.sidebar .nav-link {
+    color: rgba(255,255,255,0.75);
+    padding: 15px 20px;
+    border-radius: 5px;
+    margin: 5px 0;
+    transition: all 0.3s;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    color: white;
+    background-color: rgba(255,255,255,0.1);
+}
+
+.sidebar .nav-link i {
+    width: 24px;
+    text-align: center;
+    margin-right: 10px;
+}
+
+.main-content {
+    margin-left: 260px;
+    padding: 30px;
+}
+
+.stat-card .card-body {
+    padding: 25px;
+}
+
+.stat-card .icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+}
+
+/* Document Styles */
+.document-item,
+.action-item {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: all 0.3s;
+}
+
+.document-item:hover,
+.action-item:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+.document-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Upload Area */
+.upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 30px;
+    text-align: center;
+    background-color: #f8f9fa;
+    transition: all 0.3s;
+}
+
+.upload-area:hover {
+    border-color: var(--primary-color);
+    background-color: #e9ecef;
+}
+
+.upload-icon {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+/* Login & Register Styles */
+.login-card,
+.register-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.login-image,
+.register-image {
+    background: linear-gradient(135deg, rgba(13,110,253,0.9) 0%, rgba(0,153,255,0.9) 100%);
+    background-size: cover;
+    background-position: center;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px;
+    color: white;
+}
+
+.login-form,
+.register-form {
+    padding: 40px;
+}
+
+.login-footer,
+.register-footer {
+    border-top: 1px solid #e9ecef;
+    padding-top: 20px;
+    margin-top: 30px;
+}
+
+/* Demo Badge */
+.demo-badge {
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: #ff4757;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 0 0 10px 0;
+    font-weight: bold;
+    z-index: 1000;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        position: relative;
+        min-height: auto;
+    }
+    .main-content {
+        margin-left: 0;
+        padding: 20px;
+    }
+} 

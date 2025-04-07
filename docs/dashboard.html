@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - Tax Consultancy Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f8fa;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background-color: var(--dark-bg);
+            color: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            position: fixed;
+            z-index: 100;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.75);
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin: 5px 0;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .sidebar .nav-link i {
+            width: 24px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+        }
+        .stat-card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card .card-body {
+            padding: 25px;
+        }
+        .stat-card .icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+        .documents-card .document-item,
+        .actions-card .action-item {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        .documents-card .document-item:hover,
+        .actions-card .action-item:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+        .document-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .demo-badge {
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #ff4757;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 0 0 10px 0;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                min-height: auto;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-badge">STATIC DEMO</div>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-0">
+                <div class="d-flex justify-content-center align-items-center py-4">
+                    <h4 class="m-0"><i class="bi bi-receipt me-2"></i> Tax Portal</h4>
+                </div>
+                <hr class="text-light my-0">
+                <div class="p-3">
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle bg-light text-dark d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <span style="font-size: 1.5rem;">JD</span>
+                        </div>
+                        <h6 class="mt-2 mb-0">John Doe</h6>
+                        <small class="text-muted">User ID: 123456</small>
+                    </div>
+                    <hr class="text-light">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="bi bi-file-earmark-text"></i> View Documents</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="upload.html"><i class="bi bi-cloud-upload"></i> Upload Documents</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="bi bi-chat-dots"></i> Messages</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="bi bi-calendar-check"></i> Schedule Appointment</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="bi bi-person"></i> Profile</a>
+                        </li>
+                    </ul>
+                </div>
+                <hr class="text-light">
+                <div class="p-3">
+                    <a href="index.html" class="nav-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3>Dashboard</h3>
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <small class="text-muted">Subscription Status:</small>
+                            <span class="badge bg-success ms-2">Active</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-bell"></i>
+                            <span class="badge bg-danger ms-1">2</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="stat-card card text-white bg-primary">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title">Documents</h6>
+                                        <h2 class="mb-0">12</h2>
+                                    </div>
+                                    <div class="icon">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </div>
+                                </div>
+                                <small>3 uploaded this month</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="stat-card card text-white bg-warning">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title">Pending Actions</h6>
+                                        <h2 class="mb-0">4</h2>
+                                    </div>
+                                    <div class="icon">
+                                        <i class="bi bi-exclamation-circle"></i>
+                                    </div>
+                                </div>
+                                <small>2 require immediate attention</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="stat-card card text-white bg-info">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title">Messages</h6>
+                                        <h2 class="mb-0">5</h2>
+                                    </div>
+                                    <div class="icon">
+                                        <i class="bi bi-chat-dots"></i>
+                                    </div>
+                                </div>
+                                <small>2 unread messages</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="stat-card card text-white bg-success">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title">Appointments</h6>
+                                        <h2 class="mb-0">2</h2>
+                                    </div>
+                                    <div class="icon">
+                                        <i class="bi bi-calendar-check"></i>
+                                    </div>
+                                </div>
+                                <small>Next: May 15, 2023</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Documents and Pending Actions -->
+                <div class="row">
+                    <!-- Recent Documents -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card documents-card">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Recent Documents</h5>
+                                <a href="#" class="btn btn-sm btn-outline-primary">View All</a>
+                            </div>
+                            <div class="card-body">
+                                <div class="document-item d-flex align-items-center">
+                                    <div class="document-icon bg-danger text-white me-3">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">Income Tax Return 2022-23</h6>
+                                        <small class="text-muted">PDF • 2.3 MB • Uploaded 2 days ago</small>
+                                    </div>
+                                    <a href="#" class="btn btn-sm btn-light"><i class="bi bi-download"></i></a>
+                                </div>
+                                <div class="document-item d-flex align-items-center">
+                                    <div class="document-icon bg-primary text-white me-3">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">Form 16 (2022-23)</h6>
+                                        <small class="text-muted">PDF • 1.8 MB • Uploaded 1 week ago</small>
+                                    </div>
+                                    <a href="#" class="btn btn-sm btn-light"><i class="bi bi-download"></i></a>
+                                </div>
+                                <div class="document-item d-flex align-items-center">
+                                    <div class="document-icon bg-success text-white me-3">
+                                        <i class="bi bi-file-earmark-spreadsheet"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">Investment Declarations</h6>
+                                        <small class="text-muted">XLSX • 245 KB • Uploaded 2 weeks ago</small>
+                                    </div>
+                                    <a href="#" class="btn btn-sm btn-light"><i class="bi bi-download"></i></a>
+                                </div>
+                                <div class="document-item d-flex align-items-center">
+                                    <div class="document-icon bg-warning text-white me-3">
+                                        <i class="bi bi-file-earmark-image"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">Rent Receipt</h6>
+                                        <small class="text-muted">JPG • 850 KB • Uploaded 2 weeks ago</small>
+                                    </div>
+                                    <a href="#" class="btn btn-sm btn-light"><i class="bi bi-download"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Actions -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card actions-card">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Pending Actions</h5>
+                                <span class="badge bg-warning">4 Items</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="action-item d-flex align-items-center">
+                                    <div class="bg-danger text-white rounded-circle p-2 me-3">
+                                        <i class="bi bi-exclamation-lg"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">Complete Tax Declaration Form</h6>
+                                        <small class="text-danger">Due: 3 days ago</small>
+                                    </div>
+                                    <a href="#" class="btn btn-sm btn-outline-danger">Complete</a>
+                                </div>
+                                <div class="action-item d-flex align-items-center">
+                                    <div class="bg-warning text-dark rounded-circle p-2 me-3">
+                                        <i class="bi bi-clock"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">Upload Proof of Investment</h6>
+                                        <small class="text-warning">Due: Tomorrow</small>
+                                    </div>
+                                    <a href="#" class="btn btn-sm btn-outline-warning">Upload</a>
+                                </div>
+                                <div class="action-item d-flex align-items-center">
+                                    <div class="bg-info text-white rounded-circle p-2 me-3">
+                                        <i class="bi bi-calendar"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">Schedule Quarterly Tax Review</h6>
+                                        <small class="text-info">Due: Next week</small>
+                                    </div>
+                                    <a href="#" class="btn btn-sm btn-outline-info">Schedule</a>
+                                </div>
+                                <div class="action-item d-flex align-items-center">
+                                    <div class="bg-secondary text-white rounded-circle p-2 me-3">
+                                        <i class="bi bi-card-checklist"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">Verify Account Details</h6>
+                                        <small class="text-secondary">Due: Next month</small>
+                                    </div>
+                                    <a href="#" class="btn btn-sm btn-outline-secondary">Verify</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subscription Card -->
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">Subscription Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-3 text-center text-md-start mb-3 mb-md-0">
+                                        <h4 class="text-primary mb-0">Premium Plan</h4>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                    <div class="col-md-3 text-center text-md-start mb-3 mb-md-0">
+                                        <small class="text-muted d-block">Monthly Fee</small>
+                                        <h5 class="mb-0">₹236.00</h5>
+                                        <small class="text-muted">(incl. 18% GST)</small>
+                                    </div>
+                                    <div class="col-md-3 text-center text-md-start mb-3 mb-md-0">
+                                        <small class="text-muted d-block">Next Billing Date</small>
+                                        <h5 class="mb-0">May 15, 2023</h5>
+                                    </div>
+                                    <div class="col-md-3 text-center text-md-end">
+                                        <a href="#" class="btn btn-primary mb-2">Manage Subscription</a>
+                                        <a href="#" class="btn btn-outline-secondary d-block d-md-inline-block">View Invoices</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

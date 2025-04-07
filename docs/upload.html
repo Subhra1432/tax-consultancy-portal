@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Documents - Tax Consultancy Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f8fa;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background-color: var(--dark-bg);
+            color: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            position: fixed;
+            z-index: 100;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.75);
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin: 5px 0;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .sidebar .nav-link i {
+            width: 24px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background-color: #f8f9fa;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background-color: #e9ecef;
+        }
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        .recommended-document-item {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            border-left: 4px solid var(--primary-color);
+        }
+        .recommended-document-item:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+        .doc-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .demo-badge {
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #ff4757;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 0 0 10px 0;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                min-height: auto;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-badge">STATIC DEMO</div>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-0">
+                <div class="d-flex justify-content-center align-items-center py-4">
+                    <h4 class="m-0"><i class="bi bi-receipt me-2"></i> Tax Portal</h4>
+                </div>
+                <hr class="text-light my-0">
+                <div class="p-3">
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle bg-light text-dark d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <span style="font-size: 1.5rem;">JD</span>
+                        </div>
+                        <h6 class="mt-2 mb-0">John Doe</h6>
+                        <small class="text-muted">User ID: 123456</small>
+                    </div>
+                    <hr class="text-light">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="bi bi-file-earmark-text"></i> View Documents</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#"><i class="bi bi-cloud-upload"></i> Upload Documents</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="bi bi-chat-dots"></i> Messages</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="bi bi-calendar-check"></i> Schedule Appointment</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="bi bi-person"></i> Profile</a>
+                        </li>
+                    </ul>
+                </div>
+                <hr class="text-light">
+                <div class="p-3">
+                    <a href="index.html" class="nav-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3>Upload Documents</h3>
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <small class="text-muted">Subscription Status:</small>
+                            <span class="badge bg-success ms-2">Active</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-bell"></i>
+                            <span class="badge bg-danger ms-1">2</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Upload Area -->
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">Upload New Document</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="upload-area mb-4">
+                                    <div class="upload-icon">
+                                        <i class="bi bi-cloud-upload"></i>
+                                    </div>
+                                    <h5>Drag and drop files here</h5>
+                                    <p class="text-muted mb-4">or click to browse your files</p>
+                                    <input type="file" id="file-upload" class="d-none">
+                                    <label for="file-upload" class="btn btn-primary">
+                                        <i class="bi bi-file-earmark-plus me-2"></i>Choose File
+                                    </label>
+                                </div>
+
+                                <form>
+                                    <div class="mb-3">
+                                        <label for="documentTitle" class="form-label">Document Title</label>
+                                        <input type="text" class="form-control" id="documentTitle" placeholder="e.g., Income Tax Return 2022-23">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="documentType" class="form-label">Document Type</label>
+                                        <select class="form-select" id="documentType">
+                                            <option selected>Select document type</option>
+                                            <option value="tax_return">Tax Return</option>
+                                            <option value="form16">Form 16</option>
+                                            <option value="investment_proof">Investment Proof</option>
+                                            <option value="property_tax">Property Tax Receipt</option>
+                                            <option value="rent_receipt">Rent Receipt</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="documentDescription" class="form-label">Description (Optional)</label>
+                                        <textarea class="form-control" id="documentDescription" rows="3" placeholder="Add any additional details about this document"></textarea>
+                                    </div>
+                                    <div class="text-end">
+                                        <button type="button" class="btn btn-secondary me-2">Cancel</button>
+                                        <button type="button" class="btn btn-primary">Upload Document</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recommended Documents and Tips -->
+                    <div class="col-lg-4">
+                        <div class="card mb-4">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">Recommended Documents</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="recommended-document-item d-flex align-items-center">
+                                    <div class="doc-icon bg-danger text-white me-3">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Income Tax Return</h6>
+                                        <small class="text-muted">Current financial year</small>
+                                    </div>
+                                </div>
+                                <div class="recommended-document-item d-flex align-items-center">
+                                    <div class="doc-icon bg-primary text-white me-3">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Form 16</h6>
+                                        <small class="text-muted">From employer</small>
+                                    </div>
+                                </div>
+                                <div class="recommended-document-item d-flex align-items-center">
+                                    <div class="doc-icon bg-success text-white me-3">
+                                        <i class="bi bi-file-earmark-spreadsheet"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Investment Declarations</h6>
+                                        <small class="text-muted">For tax exemptions</small>
+                                    </div>
+                                </div>
+                                <div class="recommended-document-item d-flex align-items-center">
+                                    <div class="doc-icon bg-warning text-white me-3">
+                                        <i class="bi bi-file-earmark-image"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Property Tax Receipt</h6>
+                                        <small class="text-muted">If applicable</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">Tips for Uploading</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item bg-transparent px-0">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Accepted File Formats:</strong>
+                                        <span class="d-block text-muted ms-4">PDF, DOC, DOCX, JPG, JPEG, PNG, XLS, XLSX</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent px-0">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Maximum File Size:</strong>
+                                        <span class="d-block text-muted ms-4">5MB per file</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent px-0">
+                                        <i class="bi bi-shield-lock-fill text-primary me-2"></i>
+                                        <strong>Secure Storage:</strong>
+                                        <span class="d-block text-muted ms-4">All documents are encrypted and stored securely</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent px-0">
+                                        <i class="bi bi-eye-slash-fill text-primary me-2"></i>
+                                        <strong>Privacy:</strong>
+                                        <span class="d-block text-muted ms-4">Your documents are only accessible to you and your assigned tax consultant</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Demo - Simulate drag and drop functionality
+        const uploadArea = document.querySelector('.upload-area');
+        const fileInput = document.getElementById('file-upload');
+        
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('bg-light');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('bg-light');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('bg-light');
+            // This would normally process the file, but this is just a demo
+            alert('This is a static demo. File upload is not functional.');
+        });
+        
+        fileInput.addEventListener('change', () => {
+            // This would normally process the file, but this is just a demo
+            alert('This is a static demo. File upload is not functional.');
+        });
+    </script>
+</body>
+</html> 
