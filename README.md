@@ -20,7 +20,7 @@ A modern web application for tax consultation services with user and admin manag
 
 1. Clone this repository
 ```
-git clone https://github.com/yourusername/tax-consultancy-portal.git
+git clone https://github.com/Subhra1432/tax-consultancy-portal.git
 cd tax-consultancy-portal
 ```
 
