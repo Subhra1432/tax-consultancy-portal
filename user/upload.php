@@ -1,72 +1,90 @@
 <?php
+// Start session
 session_start();
-require_once '../includes/config.php';
 
 // Check if user is logged in
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'user') {
+if (!isset($_SESSION['user_id'])) {
     header("Location: ../login.php");
     exit();
 }
+
+// Include database connection
+require_once '../includes/config.php';
 
 // Get user information
 $user_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+$stmt->close();
 
-// Handle file upload
-$message = '';
-$messageType = '';
-
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["document"])) {
-    $title = trim($_POST['document_title']);
-    $target_dir = "../uploads/";
-    
-    // Create directory if it doesn't exist
-    if (!file_exists($target_dir)) {
-        mkdir($target_dir, 0777, true);
-    }
-    
-    // Generate unique filename
-    $file_name = basename($_FILES["document"]["name"]);
-    $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-    $unique_name = uniqid() . '.' . $file_extension;
-    $target_file = $target_dir . $unique_name;
-    
-    // Allowed file types
-    $allowed_types = array('pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'xls', 'xlsx');
-    
-    // Check if file type is allowed
-    if (!in_array($file_extension, $allowed_types)) {
-        $message = "Sorry, only PDF, DOC, DOCX, JPG, JPEG, PNG, XLS, XLSX files are allowed.";
-        $messageType = "danger";
-    } else if ($_FILES["document"]["size"] > 5000000) { // 5MB max file size
-        $message = "Sorry, your file is too large. Maximum file size is 5MB.";
-        $messageType = "danger";
-    } else if (move_uploaded_file($_FILES["document"]["tmp_name"], $target_file)) {
-        // Insert document info into database
-        $stmt = $conn->prepare("INSERT INTO documents (user_id, title, file_path, file_type) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("isss", $user_id, $title, $unique_name, $file_extension);
-        
-        if ($stmt->execute()) {
-            $message = "The file " . htmlspecialchars($file_name) . " has been uploaded.";
-            $messageType = "success";
-        } else {
-            $message = "Sorry, there was an error uploading your file.";
-            $messageType = "danger";
-        }
-    } else {
-        $message = "Sorry, there was an error uploading your file.";
-        $messageType = "danger";
-    }
-}
-
-// Get unread messages count
-$stmt = $conn->prepare("SELECT COUNT(*) as msg_count FROM messages WHERE receiver_id = ? AND is_read = 0");
+// Get unread message count
+$stmt = $conn->prepare("SELECT COUNT(*) AS unread_count FROM messages WHERE recipient_id = ? AND is_read = 0");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$unread_messages = $stmt->get_result()->fetch_assoc()['msg_count'];
+$result = $stmt->get_result();
+$unread_messages = $result->fetch_assoc()['unread_count'];
+$stmt->close();
+
+// Handle file upload
+$upload_error = '';
+$upload_success = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['document'])) {
+    // Define allowed file types and max size (5MB)
+    $allowed_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+                     'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     'image/jpeg', 'image/png', 'image/jpg'];
+    $max_size = 5 * 1024 * 1024; // 5MB in bytes
+    
+    $file = $_FILES['document'];
+    $title = mysqli_real_escape_string($conn, $_POST['title']);
+    $doc_type = mysqli_real_escape_string($conn, $_POST['doc_type']);
+    $description = mysqli_real_escape_string($conn, $_POST['description']);
+    
+    // Validate file
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $upload_error = 'An error occurred during file upload. Please try again.';
+    } elseif (!in_array($file['type'], $allowed_types)) {
+        $upload_error = 'Invalid file type. Allowed types: PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG.';
+    } elseif ($file['size'] > $max_size) {
+        $upload_error = 'File size exceeds the limit of 5MB.';
+    } elseif (empty($title)) {
+        $upload_error = 'Please provide a document title.';
+    } else {
+        // Create uploads directory if it doesn't exist
+        $upload_dir = "../uploads/";
+        if (!file_exists($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+        
+        // Generate unique filename
+        $file_ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $unique_filename = uniqid() . '_' . time() . '.' . $file_ext;
+        $upload_path = $upload_dir . $unique_filename;
+        
+        // Move file to uploads directory
+        if (move_uploaded_file($file['tmp_name'], $upload_path)) {
+            // Insert document info into database
+            $stmt = $conn->prepare("INSERT INTO documents (user_id, title, file_name, file_type, file_size, file_path, document_type, description, uploaded_by, upload_date) 
+                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param("issidssi", $user_id, $title, $file['name'], $file['type'], $file['size'], $unique_filename, $doc_type, $description, $user_id);
+            
+            if ($stmt->execute()) {
+                $upload_success = 'Document uploaded successfully!';
+            } else {
+                $upload_error = 'Database error. Please try again later.';
+                // Remove uploaded file if database insertion fails
+                unlink($upload_path);
+            }
+            $stmt->close();
+        } else {
+            $upload_error = 'Failed to move uploaded file. Please try again.';
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -74,100 +92,190 @@ $unread_messages = $stmt->get_result()->fetch_assoc()['msg_count'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Documents - Tax Consultancy Portal</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
+        :root {
+            --primary-color: #0062ff;
+            --primary-light: #e6f0ff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --dark-text: #343a40;
+            --border-color: #e9ecef;
+        }
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #f8f9fa;
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #f5f9ff;
             color: #333;
         }
         .sidebar {
             background-color: white;
+            color: var(--dark-text);
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
             height: 100vh;
-            position: sticky;
-            top: 0;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
-            padding: 20px 0;
+            position: fixed;
+            z-index: 100;
+            padding: 0;
+            border-right: 1px solid var(--border-color);
         }
-        .sidebar-link {
+        .sidebar-brand {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar .nav-link {
+            color: #718096;
+            padding: 0.8rem 1.5rem;
             display: flex;
             align-items: center;
-            padding: 12px 20px;
-            color: #666;
-            text-decoration: none;
+            margin: 0.25rem 0;
             border-left: 3px solid transparent;
         }
-        .sidebar-link:hover, .sidebar-link.active {
-            background-color: #f8f9fa;
-            color: #0d6efd;
-            border-left: 3px solid #0d6efd;
+        .sidebar .nav-link:hover {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
         }
-        .sidebar-link i {
+        .sidebar .nav-link.active {
+            color: var(--primary-color);
+            background-color: var(--primary-light);
+            border-left: 3px solid var(--primary-color);
+        }
+        .sidebar .nav-link i {
+            width: 24px;
+            font-size: 1.25rem;
             margin-right: 10px;
-            font-size: 20px;
+            color: #718096;
+        }
+        .sidebar .nav-link.active i,
+        .sidebar .nav-link:hover i {
+            color: var(--primary-color);
         }
         .main-content {
-            padding: 20px;
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        .page-heading {
+            margin-bottom: 2rem;
+            font-weight: 600;
+            font-size: 2rem;
         }
         .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             border: none;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+        }
+        .card-body {
+            padding: 1.5rem;
         }
         .upload-area {
             border: 2px dashed #dee2e6;
-            border-radius: 8px;
-            padding: 30px;
+            border-radius: 10px;
+            padding: 2rem;
             text-align: center;
-            cursor: pointer;
+            background-color: var(--light-bg);
             transition: all 0.3s;
-            background: #f8f9fa;
+            cursor: pointer;
         }
-        .upload-area:hover, .upload-area.dragover {
-            border-color: #0d6efd;
-            background: #e9ecef;
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background-color: var(--primary-light);
         }
         .upload-icon {
-            font-size: 48px;
-            color: #adb5bd;
-            margin-bottom: 15px;
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
         }
-        .table th {
-            font-weight: 600;
-            color: #495057;
+        .form-label {
+            font-weight: 500;
+            color: #4a5568;
         }
-        .theme-toggle {
-            cursor: pointer;
-            font-size: 1.5rem;
-            color: #6c757d;
+        .form-control, .form-select {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
         }
-        .document-type {
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(0, 98, 255, 0.1);
+        }
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .btn-outline-secondary {
+            color: #4a5568;
+            border-color: #e2e8f0;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .recommended-document-item {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            background-color: var(--light-bg);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        .recommended-document-item:hover {
+            background-color: var(--primary-light);
+        }
+        .doc-icon {
             width: 40px;
             height: 40px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 5px;
-            font-size: 18px;
+            margin-right: 1rem;
         }
-        .type-pdf {
-            background-color: #f8d7da;
-            color: #dc3545;
+        .tip-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1rem;
         }
-        .type-doc, .type-docx {
-            background-color: #cfe2ff;
-            color: #0d6efd;
+        .tip-icon {
+            margin-right: 0.75rem;
+            color: var(--primary-color);
+            font-size: 1.25rem;
+            line-height: 1.5;
         }
-        .type-xls, .type-xlsx {
-            background-color: #d1e7dd;
-            color: #198754;
+        .unread-badge {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 0.5rem;
         }
-        .type-jpg, .type-jpeg, .type-png {
-            background-color: #fff3cd;
-            color: #ffc107;
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
         }
     </style>
 </head>
@@ -175,259 +283,272 @@ $unread_messages = $stmt->get_result()->fetch_assoc()['msg_count'];
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-                <div class="text-center mb-4">
-                    <h5>Ut Corporate Services</h5>
-                    <p class="text-muted">Client Portal</p>
+            <div class="col-lg-2 sidebar">
+                <div class="sidebar-brand">
+                    <h4 class="mb-0">Ut Corporate Services</h4>
+                    <p class="text-muted mb-0">Client Portal</p>
                 </div>
-                
-                <div class="pt-3">
-                    <a href="dashboard.php" class="sidebar-link">
-                        <i class="bi bi-grid"></i> Dashboard
-                    </a>
-                    <a href="documents.php" class="sidebar-link">
-                        <i class="bi bi-file-earmark-text"></i> View Documents
-                    </a>
-                    <a href="upload.php" class="sidebar-link active">
-                        <i class="bi bi-cloud-upload"></i> Upload Documents
-                    </a>
-                    <a href="messages.php" class="sidebar-link">
-                        <i class="bi bi-chat-left-text"></i> Messages
-                        <?php if ($unread_messages > 0): ?>
-                            <span class="badge bg-danger rounded-pill ms-auto"><?php echo $unread_messages; ?></span>
-                        <?php endif; ?>
-                    </a>
-                    <a href="appointments.php" class="sidebar-link">
-                        <i class="bi bi-calendar-check"></i> Schedule Appointment
-                    </a>
-                    <a href="profile.php" class="sidebar-link">
-                        <i class="bi bi-person"></i> Profile
-                    </a>
-                    <a href="../logout.php" class="sidebar-link mt-5">
-                        <i class="bi bi-box-arrow-right"></i> Logout
-                    </a>
-                </div>
+                <ul class="nav flex-column mt-3">
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.php">
+                            <i class="bi bi-grid-1x2-fill"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="upload.php">
+                            <i class="bi bi-upload"></i> Upload Documents
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="documents.php">
+                            <i class="bi bi-file-earmark-text"></i> View Documents
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="messages.php">
+                            <i class="bi bi-chat-left-text"></i> Messages 
+                            <?php if ($unread_messages > 0): ?>
+                                <span class="unread-badge"><?php echo $unread_messages; ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="appointments.php">
+                            <i class="bi bi-calendar"></i> Schedule Appointment
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="profile.php">
+                            <i class="bi bi-person"></i> Profile
+                        </a>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <a class="nav-link" href="../logout.php">
+                            <i class="bi bi-box-arrow-left"></i> Logout
+                        </a>
+                    </li>
+                </ul>
             </div>
-            
+
             <!-- Main Content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
-                <!-- Header -->
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Upload Documents</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <div class="theme-toggle">
-                            <i class="bi bi-sun"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <?php if (!empty($message)): ?>
-                    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-                        <?php echo $message; ?>
+            <div class="col-lg-10 main-content">
+                <h1 class="page-heading">Upload Documents</h1>
+
+                <?php if (!empty($upload_error)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <?php echo $upload_error; ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 <?php endif; ?>
-                
+
+                <?php if (!empty($upload_success)): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <?php echo $upload_success; ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <?php endif; ?>
+
                 <div class="row">
-                    <div class="col-md-8">
+                    <!-- Upload Area -->
+                    <div class="col-lg-8">
                         <div class="card">
+                            <div class="card-header">
+                                Upload New Document
+                            </div>
                             <div class="card-body">
-                                <h5 class="card-title mb-4">Upload New Document</h5>
-                                
-                                <form method="POST" enctype="multipart/form-data" id="upload-form">
-                                    <div class="mb-3">
-                                        <label for="document_title" class="form-label">Document Title</label>
-                                        <input type="text" class="form-control" id="document_title" name="document_title" required>
-                                    </div>
-                                    
-                                    <div class="mb-4">
-                                        <label class="form-label">Document File</label>
-                                        <div class="upload-area" id="upload-area">
-                                            <i class="bi bi-cloud-arrow-up upload-icon"></i>
-                                            <h5>Drag & Drop files here</h5>
-                                            <p class="text-muted">or click to browse files</p>
-                                            <input type="file" name="document" id="file-input" class="d-none" required>
-                                            <div class="file-info mt-3 d-none">
-                                                <p class="mb-1"><span id="file-name"></span> (<span id="file-size"></span>)</p>
-                                                <div class="progress">
-                                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                                                </div>
-                                            </div>
+                                <form action="upload.php" method="POST" enctype="multipart/form-data">
+                                    <div class="upload-area mb-4" id="dropArea">
+                                        <div class="upload-icon">
+                                            <i class="bi bi-cloud-arrow-up"></i>
                                         </div>
+                                        <h5 class="mb-2">Drag and drop files here</h5>
+                                        <p class="text-muted mb-4">or click to browse your files</p>
+                                        <input type="file" id="file-upload" name="document" class="d-none">
+                                        <button type="button" class="btn btn-primary" id="browseBtn">
+                                            <i class="bi bi-file-earmark-plus me-2"></i>Choose File
+                                        </button>
                                     </div>
-                                    
+                                    <div id="selected-file" class="alert alert-info d-none mb-4">
+                                        <i class="bi bi-file-earmark me-2"></i>
+                                        <span id="file-name">No file selected</span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label">Document Title</label>
+                                        <input type="text" class="form-control" id="title" name="title" placeholder="e.g., Income Tax Return 2022-23" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="doc_type" class="form-label">Document Type</label>
+                                        <select class="form-select" id="doc_type" name="doc_type" required>
+                                            <option value="" selected disabled>Select document type</option>
+                                            <option value="tax_return">Tax Return</option>
+                                            <option value="form16">Form 16</option>
+                                            <option value="investment_proof">Investment Proof</option>
+                                            <option value="property_tax">Property Tax Receipt</option>
+                                            <option value="rent_receipt">Rent Receipt</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="description" class="form-label">Description (Optional)</label>
+                                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Add any additional details about this document"></textarea>
+                                    </div>
                                     <div class="text-end">
+                                        <button type="button" class="btn btn-outline-secondary me-2" onclick="window.location.href='dashboard.php'">Cancel</button>
                                         <button type="submit" class="btn btn-primary">Upload Document</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
-                        
-                        <div class="card mt-4">
+                    </div>
+
+                    <!-- Recommended Documents and Tips -->
+                    <div class="col-lg-4">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                Recommended Documents
+                            </div>
                             <div class="card-body">
-                                <h5 class="card-title mb-3">Recommended Documents</h5>
-                                <div class="list-group">
-                                    <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
-                                        <div class="document-type type-pdf">
-                                            <i class="bi bi-file-earmark-pdf"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-0">Income Tax Return</h6>
-                                            <p class="text-muted mb-0 small">Upload your latest ITR form</p>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-primary ms-auto">Upload</button>
+                                <div class="recommended-document-item">
+                                    <div class="doc-icon bg-danger text-white">
+                                        <i class="bi bi-file-earmark-pdf"></i>
                                     </div>
-                                    <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
-                                        <div class="document-type type-doc">
-                                            <i class="bi bi-file-earmark-text"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-0">ID Proof</h6>
-                                            <p class="text-muted mb-0 small">PAN card, Aadhar or passport</p>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-primary ms-auto">Upload</button>
+                                    <div>
+                                        <h6 class="mb-0">Income Tax Return</h6>
+                                        <small class="text-muted">Current financial year</small>
                                     </div>
-                                    <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
-                                        <div class="document-type type-xls">
-                                            <i class="bi bi-file-earmark-excel"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-0">Investment Statements</h6>
-                                            <p class="text-muted mb-0 small">Bank statements for tax deductions</p>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-primary ms-auto">Upload</button>
+                                </div>
+                                <div class="recommended-document-item">
+                                    <div class="doc-icon bg-primary text-white">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Form 16</h6>
+                                        <small class="text-muted">From employer</small>
+                                    </div>
+                                </div>
+                                <div class="recommended-document-item">
+                                    <div class="doc-icon bg-success text-white">
+                                        <i class="bi bi-file-earmark-spreadsheet"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Investment Declarations</h6>
+                                        <small class="text-muted">For tax exemptions</small>
+                                    </div>
+                                </div>
+                                <div class="recommended-document-item">
+                                    <div class="doc-icon bg-warning text-white">
+                                        <i class="bi bi-file-earmark-image"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Property Tax Receipt</h6>
+                                        <small class="text-muted">If applicable</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="col-md-4">
+
                         <div class="card">
+                            <div class="card-header">
+                                Tips for Uploading
+                            </div>
                             <div class="card-body">
-                                <h5 class="card-title mb-3">Tips for Uploading</h5>
-                                
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="bg-light rounded-circle p-2 me-3">
-                                        <i class="bi bi-file-check text-primary"></i>
+                                <div class="tip-item">
+                                    <div class="tip-icon">
+                                        <i class="bi bi-check-circle-fill"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">Accepted File Formats</h6>
-                                        <p class="text-muted mb-0 small">PDF, DOC, DOCX, JPG, JPEG, PNG, XLS, XLSX</p>
+                                        <strong>Accepted File Formats</strong>
+                                        <p class="text-muted mb-0">PDF, DOC, DOCX, JPG, JPEG, PNG, XLS, XLSX</p>
                                     </div>
                                 </div>
-                                
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="bg-light rounded-circle p-2 me-3">
-                                        <i class="bi bi-file-earmark-text text-primary"></i>
+                                <div class="tip-item">
+                                    <div class="tip-icon">
+                                        <i class="bi bi-check-circle-fill"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">Maximum File Size</h6>
-                                        <p class="text-muted mb-0 small">5MB per document</p>
+                                        <strong>Maximum File Size</strong>
+                                        <p class="text-muted mb-0">5MB per file</p>
                                     </div>
                                 </div>
-                                
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="bg-light rounded-circle p-2 me-3">
-                                        <i class="bi bi-shield-lock text-primary"></i>
+                                <div class="tip-item">
+                                    <div class="tip-icon">
+                                        <i class="bi bi-shield-lock-fill"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">Secure Storage</h6>
-                                        <p class="text-muted mb-0 small">All documents are encrypted and securely stored</p>
+                                        <strong>Secure Storage</strong>
+                                        <p class="text-muted mb-0">All documents are encrypted and stored securely</p>
                                     </div>
                                 </div>
-                                
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded-circle p-2 me-3">
-                                        <i class="bi bi-eye text-primary"></i>
+                                <div class="tip-item">
+                                    <div class="tip-icon">
+                                        <i class="bi bi-eye-slash-fill"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">Privacy</h6>
-                                        <p class="text-muted mb-0 small">Only you and authorized tax experts can view your documents</p>
+                                        <strong>Privacy</strong>
+                                        <p class="text-muted mb-0">Your documents are only accessible to you and your assigned tax consultant</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // File upload handling
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('file-input');
-        const fileName = document.getElementById('file-name');
-        const fileSize = document.getElementById('file-size');
-        const fileInfo = document.querySelector('.file-info');
-        const progressBar = document.querySelector('.progress-bar');
-
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('file-upload');
+            const browseBtn = document.getElementById('browseBtn');
+            const selectedFile = document.getElementById('selected-file');
+            const fileName = document.getElementById('file-name');
             
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                updateFileInfo(e.dataTransfer.files[0]);
-            }
-        });
-
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length) {
-                updateFileInfo(fileInput.files[0]);
-            }
-        });
-
-        function updateFileInfo(file) {
-            fileName.textContent = file.name;
-            fileSize.textContent = formatFileSize(file.size);
-            fileInfo.classList.remove('d-none');
+            // Trigger file input when clicking the browse button or drop area
+            browseBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
             
-            // Simulate upload progress (just for visual effect)
-            let width = 0;
-            const interval = setInterval(() => {
-                width += 5;
-                progressBar.style.width = width + '%';
-                
-                if (width >= 100) {
-                    clearInterval(interval);
+            dropArea.addEventListener('click', function(event) {
+                if (event.target !== browseBtn && !browseBtn.contains(event.target)) {
+                    fileInput.click();
                 }
-            }, 50);
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
+            });
             
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            // Highlight drop area when dragging files over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    dropArea.classList.add('bg-light');
+                }, false);
+            });
             
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        // Theme toggle functionality
-        document.querySelector('.theme-toggle').addEventListener('click', function() {
-            if (this.querySelector('i').classList.contains('bi-sun')) {
-                this.querySelector('i').classList.replace('bi-sun', 'bi-moon');
-                document.body.classList.add('dark-mode');
-            } else {
-                this.querySelector('i').classList.replace('bi-moon', 'bi-sun');
-                document.body.classList.remove('dark-mode');
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    dropArea.classList.remove('bg-light');
+                }, false);
+            });
+            
+            // Handle dropped files
+            dropArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                fileInput.files = e.dataTransfer.files;
+                updateFileInfo();
+            });
+            
+            // Handle selected files
+            fileInput.addEventListener('change', updateFileInfo);
+            
+            function updateFileInfo() {
+                if (fileInput.files.length > 0) {
+                    fileName.textContent = fileInput.files[0].name;
+                    selectedFile.classList.remove('d-none');
+                } else {
+                    selectedFile.classList.add('d-none');
+                }
             }
         });
     </script>

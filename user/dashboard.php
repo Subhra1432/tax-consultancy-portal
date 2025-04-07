@@ -1,197 +1,237 @@
 <?php
+// Start session
 session_start();
-require_once '../includes/config.php';
 
 // Check if user is logged in
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'user') {
+if (!isset($_SESSION['user_id'])) {
     header("Location: ../login.php");
     exit();
 }
+
+// Include database connection
+require_once '../includes/config.php';
 
 // Get user information
 $user_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+$stmt->close();
 
-// Get subscription information
-$stmt = $conn->prepare("SELECT * FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1");
+// Get document count
+$stmt = $conn->prepare("SELECT COUNT(*) AS doc_count FROM documents WHERE user_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$subscription = $stmt->get_result()->fetch_assoc();
+$result = $stmt->get_result();
+$doc_count = $result->fetch_assoc()['doc_count'];
+$stmt->close();
 
-// Get documents count
-$stmt = $conn->prepare("SELECT COUNT(*) as doc_count FROM documents WHERE user_id = ?");
+// Get documents uploaded this month
+$current_month = date('m');
+$current_year = date('Y');
+$stmt = $conn->prepare("SELECT COUNT(*) AS monthly_count FROM documents WHERE user_id = ? AND MONTH(upload_date) = ? AND YEAR(upload_date) = ?");
+$stmt->bind_param("iii", $user_id, $current_month, $current_year);
+$stmt->execute();
+$result = $stmt->get_result();
+$monthly_count = $result->fetch_assoc()['monthly_count'];
+$stmt->close();
+
+// Get recent documents (limit to 3)
+$stmt = $conn->prepare("SELECT d.*, u.first_name, u.last_name FROM documents d 
+                        LEFT JOIN users u ON d.uploaded_by = u.id 
+                        WHERE d.user_id = ? 
+                        ORDER BY d.upload_date DESC LIMIT 3");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$doc_count = $stmt->get_result()->fetch_assoc()['doc_count'];
+$recent_docs = $stmt->get_result();
+$stmt->close();
 
-// Get uploaded documents count for this month
-$stmt = $conn->prepare("SELECT COUNT(*) as uploaded_this_month FROM documents WHERE user_id = ? AND MONTH(uploaded_at) = MONTH(CURRENT_DATE()) AND YEAR(uploaded_at) = YEAR(CURRENT_DATE())");
+// Get unread message count
+$stmt = $conn->prepare("SELECT COUNT(*) AS unread_count FROM messages WHERE recipient_id = ? AND is_read = 0");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$uploaded_this_month = $stmt->get_result()->fetch_assoc()['uploaded_this_month'];
+$result = $stmt->get_result();
+$unread_messages = $result->fetch_assoc()['unread_count'];
+$stmt->close();
 
-// Get unread messages count
-$stmt = $conn->prepare("SELECT COUNT(*) as msg_count FROM messages WHERE receiver_id = ? AND is_read = 0");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$unread_messages = $stmt->get_result()->fetch_assoc()['msg_count'];
+// Function to get initials from name
+function getInitials($name) {
+    $words = explode(' ', $name);
+    $initials = '';
+    foreach ($words as $word) {
+        $initials .= strtoupper(substr($word, 0, 1));
+    }
+    return $initials;
+}
 
-// Get pending actions count (example: documents needing review)
-$stmt = $conn->prepare("SELECT COUNT(*) as action_count FROM appointments WHERE user_id = ? AND status = 'pending' AND appointment_date > NOW()");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$pending_actions = $stmt->get_result()->fetch_assoc()['action_count'];
-
-// Get upcoming appointments
-$stmt = $conn->prepare("SELECT COUNT(*) as appointment_count FROM appointments WHERE user_id = ? AND appointment_date > NOW() AND status = 'pending'");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$appointment_count = $stmt->get_result()->fetch_assoc()['appointment_count'];
-
-// Get recent documents
-$stmt = $conn->prepare("SELECT * FROM documents WHERE user_id = ? ORDER BY uploaded_at DESC LIMIT 5");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$recent_docs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+// Get user's full name and initials
+$full_name = $user['first_name'] . ' ' . $user['last_name'];
+$initials = getInitials($full_name);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Tax Consultancy Portal</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>User Dashboard - Tax Consultancy Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
+        :root {
+            --primary-color: #0062ff;
+            --primary-light: #e6f0ff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --dark-text: #343a40;
+            --border-color: #e9ecef;
+        }
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #f8f9fa;
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #f5f9ff;
             color: #333;
         }
         .sidebar {
             background-color: white;
+            color: var(--dark-text);
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
             height: 100vh;
-            position: sticky;
-            top: 0;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
-            padding: 20px 0;
+            position: fixed;
+            z-index: 100;
+            padding: 0;
+            border-right: 1px solid var(--border-color);
         }
-        .sidebar-link {
+        .sidebar-brand {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar .nav-link {
+            color: #718096;
+            padding: 0.8rem 1.5rem;
             display: flex;
             align-items: center;
-            padding: 12px 20px;
-            color: #666;
-            text-decoration: none;
+            margin: 0.25rem 0;
             border-left: 3px solid transparent;
         }
-        .sidebar-link:hover, .sidebar-link.active {
-            background-color: #f8f9fa;
-            color: #0d6efd;
-            border-left: 3px solid #0d6efd;
+        .sidebar .nav-link:hover {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
         }
-        .sidebar-link i {
+        .sidebar .nav-link.active {
+            color: var(--primary-color);
+            background-color: var(--primary-light);
+            border-left: 3px solid var(--primary-color);
+        }
+        .sidebar .nav-link i {
+            width: 24px;
+            font-size: 1.25rem;
             margin-right: 10px;
-            font-size: 20px;
+            color: #718096;
+        }
+        .sidebar .nav-link.active i,
+        .sidebar .nav-link:hover i {
+            color: var(--primary-color);
         }
         .main-content {
-            padding: 20px;
+            margin-left: 250px;
+            padding: 2rem;
         }
-        .card {
+        .page-heading {
+            margin-bottom: 2rem;
+            font-weight: 600;
+            font-size: 2rem;
+        }
+        .stat-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
             border: none;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
         }
-        .stats-card {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+        .stat-card h3 {
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+            font-size: 1rem;
+            font-weight: 500;
         }
-        .stats-card h1 {
-            font-size: 3rem;
-            font-weight: bold;
-            margin: 10px 0;
-            color: #0d6efd;
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
         }
-        .stats-card p {
-            color: #6c757d;
-            margin: 0;
+        .document-meta {
+            color: #718096;
+            font-size: 0.875rem;
         }
-        .card-icon {
-            font-size: 24px;
-            color: #6c757d;
-            display: inline-block;
-            float: right;
-        }
-        .doc-item {
+        .document-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid #f1f1f1;
         }
-        .doc-item:last-child {
+        .document-item:last-child {
             border-bottom: none;
         }
-        .doc-icon {
+        .document-icon {
             width: 40px;
-            height: 40px;
-            background-color: #e9ecef;
-            border-radius: 5px;
+            margin-right: 1rem;
+            color: #4a5568;
+        }
+        .document-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        .badge-notification {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.75rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 15px;
         }
-        .doc-info {
-            flex: 1;
-        }
-        .doc-info h6 {
-            margin: 0;
-            font-weight: 600;
-        }
-        .doc-info small {
-            color: #6c757d;
-        }
-        .doc-action {
-            margin-left: 15px;
-        }
-        .task-item {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            background-color: #f8f9fa;
-            border-left: 3px solid #0d6efd;
-        }
-        .task-item h6 {
-            margin: 0;
-            color: #333;
-            font-weight: 600;
-        }
-        .task-item small {
-            color: #6c757d;
-        }
-        .navbar-brand {
-            font-weight: bold;
-        }
-        .theme-toggle {
-            cursor: pointer;
-            font-size: 1.5rem;
-            color: #6c757d;
-        }
-        .profile-dropdown img {
-            width: 32px;
-            height: 32px;
+        .unread-badge {
+            background-color: var(--primary-color);
+            color: white;
             border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 0.5rem;
         }
-        .status-badge {
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 0.75rem;
+        .profile-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
         }
     </style>
 </head>
@@ -199,222 +239,118 @@ $recent_docs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-                <div class="text-center mb-4">
-                    <h5>Ut Corporate Services</h5>
-                    <p class="text-muted">Client Portal</p>
+            <div class="col-lg-2 sidebar">
+                <div class="sidebar-brand">
+                    <h4 class="mb-0">Ut Corporate Services</h4>
+                    <p class="text-muted mb-0">Client Portal</p>
                 </div>
-                
-                <div class="pt-3">
-                    <a href="dashboard.php" class="sidebar-link active">
-                        <i class="bi bi-grid"></i> Dashboard
-                    </a>
-                    <a href="documents.php" class="sidebar-link">
-                        <i class="bi bi-file-earmark-text"></i> View Documents
-                    </a>
-                    <a href="upload.php" class="sidebar-link">
-                        <i class="bi bi-cloud-upload"></i> Upload Documents
-                    </a>
-                    <a href="messages.php" class="sidebar-link">
-                        <i class="bi bi-chat-left-text"></i> Messages
-                        <?php if ($unread_messages > 0): ?>
-                            <span class="badge bg-danger rounded-pill ms-auto"><?php echo $unread_messages; ?></span>
-                        <?php endif; ?>
-                    </a>
-                    <a href="appointments.php" class="sidebar-link">
-                        <i class="bi bi-calendar-check"></i> Schedule Appointment
-                    </a>
-                    <a href="profile.php" class="sidebar-link">
-                        <i class="bi bi-person"></i> Profile
-                    </a>
-                    <a href="../logout.php" class="sidebar-link mt-5">
-                        <i class="bi bi-box-arrow-right"></i> Logout
-                    </a>
+                <ul class="nav flex-column mt-3">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="dashboard.php">
+                            <i class="bi bi-grid-1x2-fill"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="upload.php">
+                            <i class="bi bi-upload"></i> Upload Documents
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="documents.php">
+                            <i class="bi bi-file-earmark-text"></i> View Documents
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="messages.php">
+                            <i class="bi bi-chat-left-text"></i> Messages 
+                            <?php if ($unread_messages > 0): ?>
+                                <span class="unread-badge"><?php echo $unread_messages; ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="appointments.php">
+                            <i class="bi bi-calendar"></i> Schedule Appointment
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="profile.php">
+                            <i class="bi bi-person"></i> Profile
+                        </a>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <a class="nav-link" href="../logout.php">
+                            <i class="bi bi-box-arrow-left"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-10 main-content">
+                <h1 class="page-heading">Dashboard</h1>
+
+                <!-- Stats Card -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <h3>Documents</h3>
+                            <div class="stat-value"><?php echo $doc_count; ?></div>
+                            <div class="document-meta"><?php echo $monthly_count; ?> uploaded this month</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Documents -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="stat-card">
+                            <h3 class="mb-4">Recent Documents</h3>
+                            <p class="text-muted">Your recently uploaded documents</p>
+                            
+                            <?php if ($recent_docs->num_rows > 0): ?>
+                                <?php while ($doc = $recent_docs->fetch_assoc()): ?>
+                                    <div class="document-item">
+                                        <div class="document-icon">
+                                            <?php 
+                                            $file_ext = pathinfo($doc['file_name'], PATHINFO_EXTENSION);
+                                            $icon_class = 'bi-file-earmark-text';
+                                            
+                                            if (in_array($file_ext, ['pdf'])) {
+                                                $icon_class = 'bi-file-earmark-pdf';
+                                            } elseif (in_array($file_ext, ['doc', 'docx'])) {
+                                                $icon_class = 'bi-file-earmark-word';
+                                            } elseif (in_array($file_ext, ['xls', 'xlsx'])) {
+                                                $icon_class = 'bi-file-earmark-excel';
+                                            } elseif (in_array($file_ext, ['jpg', 'jpeg', 'png', 'gif'])) {
+                                                $icon_class = 'bi-file-earmark-image';
+                                            }
+                                            ?>
+                                            <i class="bi <?php echo $icon_class; ?> fs-2"></i>
+                                        </div>
+                                        <div>
+                                            <div class="document-title"><?php echo htmlspecialchars($doc['title']); ?></div>
+                                            <?php if ($doc['uploaded_by'] == $user_id): ?>
+                                                <div class="document-meta">Uploaded by You</div>
+                                            <?php else: ?>
+                                                <div class="document-meta">Uploaded by <?php echo htmlspecialchars($doc['first_name']); ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <div class="text-center py-4">
+                                    <p>You haven't uploaded any documents yet.</p>
+                                    <a href="upload.php" class="btn btn-primary">Upload Your First Document</a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Main Content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
-                <!-- Header -->
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Dashboard</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <button type="button" class="btn btn-sm btn-outline-secondary me-2">
-                            <i class="bi bi-download"></i> Export
-                        </button>
-                        <div class="theme-toggle">
-                            <i class="bi bi-sun"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Stats Cards -->
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card stats-card">
-                            <div class="d-flex justify-content-between w-100">
-                                <span>Documents</span>
-                                <i class="bi bi-file-earmark card-icon"></i>
-                            </div>
-                            <h1><?php echo $doc_count; ?></h1>
-                            <p><?php echo $uploaded_this_month; ?> uploaded this month</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card stats-card">
-                            <div class="d-flex justify-content-between w-100">
-                                <span>Pending Actions</span>
-                                <i class="bi bi-clock-history card-icon"></i>
-                            </div>
-                            <h1><?php echo $pending_actions; ?></h1>
-                            <p>1 due this week</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card stats-card">
-                            <div class="d-flex justify-content-between w-100">
-                                <span>Messages</span>
-                                <i class="bi bi-chat-left card-icon"></i>
-                            </div>
-                            <h1><?php echo $unread_messages; ?></h1>
-                            <p>Unread messages</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card stats-card">
-                            <div class="d-flex justify-content-between w-100">
-                                <span>Appointments</span>
-                                <i class="bi bi-calendar card-icon"></i>
-                            </div>
-                            <h1><?php echo $appointment_count; ?></h1>
-                            <p>Upcoming this month</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Recent Documents and Pending Actions -->
-                <div class="row mt-4">
-                    <div class="col-md-8">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">Recent Documents</h5>
-                                <p class="text-muted">Your recently uploaded and received documents</p>
-                                
-                                <?php if (empty($recent_docs)): ?>
-                                    <p class="text-muted">No documents uploaded yet</p>
-                                <?php else: ?>
-                                    <?php foreach ($recent_docs as $doc): ?>
-                                        <div class="doc-item">
-                                            <div class="doc-icon">
-                                                <?php if (strpos($doc['file_type'], 'pdf') !== false): ?>
-                                                    <i class="bi bi-file-earmark-pdf"></i>
-                                                <?php elseif (strpos($doc['file_type'], 'xls') !== false): ?>
-                                                    <i class="bi bi-file-earmark-excel"></i>
-                                                <?php else: ?>
-                                                    <i class="bi bi-file-earmark-text"></i>
-                                                <?php endif; ?>
-                                            </div>
-                                            <div class="doc-info">
-                                                <h6><?php echo htmlspecialchars($doc['title']); ?></h6>
-                                                <small>Uploaded on <?php echo date('d M Y', strtotime($doc['uploaded_at'])); ?></small>
-                                            </div>
-                                            <div class="doc-action">
-                                                <a href="#" class="btn btn-sm btn-outline-secondary">View</a>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                                
-                                <div class="text-center mt-3">
-                                    <a href="documents.php" class="btn btn-outline-primary">View All Documents</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">Pending Actions</h5>
-                                <p class="text-muted">Tasks that require your attention</p>
-                                
-                                <?php if ($subscription && $subscription['status'] == 'trial'): ?>
-                                    <div class="task-item">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-clock text-primary me-2"></i>
-                                            <div>
-                                                <h6>Upgrade subscription</h6>
-                                                <small>Due by <?php echo date('d M Y', strtotime($subscription['end_date'])); ?></small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <div class="task-item">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-clock text-primary me-2"></i>
-                                        <div>
-                                            <h6>Upload ID proof</h6>
-                                            <small>Due by <?php echo date('d M Y', strtotime('+10 days')); ?></small>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="task-item">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-clock text-primary me-2"></i>
-                                        <div>
-                                            <h6>Review tax declaration</h6>
-                                            <small>Due by <?php echo date('d M Y', strtotime('+15 days')); ?></small>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="text-center mt-3">
-                                    <a href="upload.php" class="btn btn-primary">
-                                        <i class="bi bi-cloud-upload"></i> Upload Documents
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <?php if ($subscription): ?>
-                            <div class="card mt-4">
-                                <div class="card-body">
-                                    <h5 class="card-title">Subscription Status</h5>
-                                    <?php if ($subscription['status'] == 'active'): ?>
-                                        <div class="status-badge bg-success bg-opacity-10 text-success mb-2">Active</div>
-                                        <p>Your subscription is active until <?php echo date('d M Y', strtotime($subscription['end_date'])); ?></p>
-                                    <?php elseif ($subscription['status'] == 'trial'): ?>
-                                        <div class="status-badge bg-warning bg-opacity-10 text-warning mb-2">Trial</div>
-                                        <p>Your trial ends on <?php echo date('d M Y', strtotime($subscription['end_date'])); ?></p>
-                                        <a href="subscription.php" class="btn btn-sm btn-primary">Upgrade Now</a>
-                                    <?php else: ?>
-                                        <div class="status-badge bg-danger bg-opacity-10 text-danger mb-2">Expired</div>
-                                        <p>Your subscription has expired.</p>
-                                        <a href="subscription.php" class="btn btn-sm btn-primary">Renew Now</a>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </main>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Theme toggle functionality
-        document.querySelector('.theme-toggle').addEventListener('click', function() {
-            if (this.querySelector('i').classList.contains('bi-sun')) {
-                this.querySelector('i').classList.replace('bi-sun', 'bi-moon');
-                document.body.classList.add('dark-mode');
-            } else {
-                this.querySelector('i').classList.replace('bi-moon', 'bi-sun');
-                document.body.classList.remove('dark-mode');
-            }
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html> 
